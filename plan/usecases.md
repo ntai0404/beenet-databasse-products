@@ -11,18 +11,19 @@
 - **Trạng thái**: Đang ở danh mục "Điện thoại".
 - **Bước 1**: Nhấn nút "Thêm sản phẩm mới".
 - **Bước 2 (Xác nhận)**: Hệ thống hiển thị popup hỏi: "Sản phẩm này là Dropbuy hay Non-Dropbuy?".
-- **Bước 3**: Nếu chọn **Dropbuy**: Giao diện chuyển sang tab "BIỂU MẪU" với các trường trống.
-- **Bước 4**: Nếu chọn **Non-Dropbuy**: Giao diện chuyển sang tab "BIỂU MẪU", hệ thống tự động sinh mã `N[STT]` (VD: N37) và khóa ô ID.
-- **Bước 5**: Người dùng nhập liệu trong tab và nhấn "Lưu".
-- **Bước 6**: Hệ thống khóa nút "Lưu" (Disable) để tránh nhấn đúp.
-- **Kết quả**: Hệ thống lưu dữ liệu, đóng tab Biểu mẫu và chuyển về tab danh mục cũ, dòng mới hiện lên đầu bảng.
+- **Bước 3**: Giao diện chuyển sang tab "BIỂU MẪU". Các trường quan trọng như `Tên sản phẩm`, `Giá` được đánh dấu bằng badge **"Bắt buộc"** đỏ.
+- **Bước 4 (Auto-fill)**: Hệ thống tự động điền `Link Zalo` và `Link NV` từ cấu hình mặc định giúp người dùng không phải nhập lại.
+- **Bước 5 (Media)**: Click "+ THÊM ẢNH" để chọn nhiều ảnh cùng lúc. Xem gallery và xóa bớt ảnh lỗi nếu cần.
+- **Bước 6 (Địa chỉ)**: Chọn Tỉnh/TP -> Quận/Huyện -> Phường/Xã từ dropdown hành chính (không gõ tay).
+- **Bước 7**: Nhấn "Lưu". Hệ thống tự khóa nút để tránh nhấn đúp.
+- **Kết quả**: Hệ thống lưu dữ liệu (ghép ảnh thành chuỗi `|`), đóng tab Biểu mẫu và về tab danh mục.
 
 ## ✏️ 4. Kịch bản Cập nhật (Edit)
 - **Bước 1**: Nhấn icon Sửa trên dòng sản phẩm "iPhone 15".
-- **Bước 2**: Giao diện chuyển đổi tức thì sang tab "BIỂU MẪU", tự động điền các thông tin hiện tại vào form.
-- **Bước 3**: Người dùng sửa đổi dữ liệu cần thiết.
+- **Bước 2**: Giao diện chuyển sang tab "BIỂU MẪU", load đầy đủ gallery ảnh hiện tại và các cấp địa chỉ đã chọn.
+- **Bước 3**: Người dùng sửa đổi dữ liệu, thêm/xóa ảnh trong gallery.
 - **Bước 4**: Nhấn "Cập nhật".
-- **Kết quả**: Hệ thống lưu dữ liệu, chuyển về tab danh mục cũ, dòng dữ liệu nhấp nháy màu xanh báo hiệu thành công.
+- **Kết quả**: Hệ thống cập nhật bảng dữ liệu, dòng dữ liệu nhấp nháy màu xanh báo hiệu thành công.
 
 ## 🗑 5. Kịch bản Xóa dữ liệu
 - **Bước 1**: Nhấn icon Xóa.
@@ -34,5 +35,5 @@
 - **Mô tả**: Người dùng thêm sản phẩm "ngoài luồng", không có mã Dropbuy sẵn.
 - **Bước 1**: Tại tab danh mục, nhấn "Thêm mới" -> Chọn "Non-Dropbuy".
 - **Bước 2**: Hệ thống gọi API tự động tính toán STT và điền mã `N[STT]` (VD: `N37`).
-- **Bước 3**: Chuyển sang tab "BIỂU MẪU" với ô ID Sản phẩm ở trạng thái chỉ đọc (Read-only).
+- **Bước 3**: Chuyển sang tab "BIỂU MẪU", hệ thống tự điền thông tin liên hệ mặc định.
 - **Kết quả**: Sản phẩm được lưu và quản lý theo mã Nxx tăng dần, đảm bảo duy nhất.
