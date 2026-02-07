@@ -1,0 +1,9 @@
+.env
+ggsheet-key.json
+__pycache__/
+*.pyc
+.gemini/
+.agent/
+test_api.py
+test_colors.py
+test_endpoint.py

@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SheetFlow - Smart Inventory</title>
+    <link rel="stylesheet" href="/static/style.css?v=15">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body>
+    <aside class="sidebar">
+        <div class="brand-area">
+            <div class="brand-text" id="brandText">SheetFlow</div>
+        </div>
+        <div class="sidebar-content">
+            <div class="nav-label">Tìm danh mục</div>
+            <input type="text" id="sheetSearch" class="search-input" placeholder="Gõ tên..."
+                style="width: 100%; margin-bottom: 20px;">
+            <div id="sheetList">
+                <div class="nav-label">Danh mục sản phẩm</div>
+                {% if sheet_names %}
+                {% for name in sheet_names %}
+                <div class="sheet-item {% if name == current_sheet %}active{% endif %}"
+                    onclick="switchSheet('{{ name }}')" data-name="{{ name }}">
+                    {{ name }}
+                </div>
+                {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-wrapper">
+        <header class="top-bar">
+            <div class="page-title">
+                <h1 id="currentSheetTitle">{{ current_sheet if current_sheet else "Tổng quan" }}</h1>
+                <span id="recordCount">{{ data|length if data else 0 }} bản ghi</span>
+            </div>
+            <div class="actions-group" style="display: flex; gap: 15px;">
+                {% if error %}
+                <div
+                    style="background: #fee2e2; color: #b91c1c; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600;">
+                    Lỗi: {{ error }}
+                </div>
+                {% endif %}
+                <input type="text" id="productSearch" class="search-input" placeholder="Tìm kiếm trong bảng này...">
+                <button class="btn-primary" onclick="openAddModal()">
+                    {% if current_sheet and 'mục lục' in current_sheet.lower() %}
+                    THÊM MỤC LỤC MỚI
+                    {% else %}
+                    THÊM MỚI SẢN PHẨM
+                    {% endif %}
+                </button>
+            </div>
+        </header>
+
+        <section class="content-area">
+            <!-- View Dữ liệu Bảng -->
+            <div id="tableView" class="table-view">
+                <div class="table-wrapper">
+                    <table id="dataTable">
+                        <thead id="tableHead">
+                            <tr>
+                                {% if headers %}
+                                {% for header in headers %}
+                                <th>{{ header }}</th>
+                                {% endfor %}
+                                <th style="text-align: center;">Thao tác</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                            {% if data %}
+                            {% for row in data %}
+                            {% set row_idx = loop.index + 1 %}
+                            <tr>
+                                {% for header in headers %}
+                                <td>
+                                    {% if row[header] is string and (row[header].startswith('http://') or
+                                    row[header].startswith('https://')) %}
+                                    <a href="{{ row[header] }}" target="_blank" class="table-link">{{ row[header] }}</a>
+                                    {% else %}
+                                    {{ row[header] }}
+                                    {% endif %}
+                                </td>
+                                {% endfor %}
+                                <td>
+                                    <button class="btn-action btn-edit" data-row='{{ row|tojson|safe }}'
+                                        onclick="handleEditClick(this, {{ row_idx }})">
+                                        <i data-lucide="edit-3"></i>
+                                    </button>
+                                    <button class="btn-action btn-delete" onclick="deleteRow({{ row_idx }})">
+                                        <i data-lucide="trash-2"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% else %}
+                            <tr>
+                                <td colspan="{{ headers|length + 1 if headers else 1 }}"
+                                    style="text-align: center; padding: 40px; color: var(--text-dim);">Chưa có dữ liệu
+                                    hoặc
+                                    lỗi kết nối.</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div> <!-- end table-wrapper -->
+            </div> <!-- end tableView -->
+
+            <!-- View Biểu mẫu (Tab mới) -->
+            <div id="formView" class="form-view"
+                style="display: none; padding: 20px; flex: 1; height: 100%; overflow-y: auto;">
+                <div class="form-card">
+                    <div class="form-header"
+                        style="padding: 30px 40px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: var(--header-bg);">
+                        <div class="form-title-group">
+                            <h2 id="formViewTitle"
+                                style="font-weight: 800; color: var(--text-main); margin: 0; font-size: 24px; letter-spacing: -0.01em;">
+                                THÊM MỚI SẢN PHẨM</h2>
+                            <p id="formViewSub"
+                                style="color: var(--text-dim); margin: 5px 0 0 0; font-size: 14px; font-weight: 500;">
+                                QUẢN TRỊ DỮ LIỆU <strong id="targetSheetName" style="color: var(--primary);"></strong>
+                            </p>
+                        </div>
+                        <button class="btn-secondary" onclick="goBackToPreviousSheet()"
+                            style="padding: 10px 20px; border-radius: 50px; display: flex; align-items: center; gap: 8px; font-weight: 700; border: 1px solid var(--border); font-size: 13px;">
+                            <i data-lucide="arrow-left" style="width:16px;"></i> QUAY LẠI
+                        </button>
+                    </div>
+
+                    <form id="tabProductForm" style="padding: 40px;">
+                        <div class="modal-body" style="padding: 0;">
+                            <div id="tabFormFields">
+                                <!-- Fields sẽ được inject vào đây -->
+                            </div>
+                        </div>
+
+                        <div class="form-footer"
+                            style="padding: 50px 0; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 20px; margin-top: 100px;">
+                            <button type="button" class="btn-secondary" onclick="goBackToPreviousSheet()"
+                                style="min-width: 150px; border-radius: 50px; padding: 15px 30px; font-weight: 700;">HỦY
+                                BỎ</button>
+                            <button type="submit" id="tabSaveBtn" class="btn-primary"
+                                style="min-width: 250px; border-radius: 50px; padding: 15px 40px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">LƯU
+                                DỮ LIỆU</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal xác nhận loại sản phẩm -->
+    <div id="confirmModal" class="modal" style="display: none; z-index: 2000;">
+        <div class="modal-card" style="max-width: 450px; text-align: center; padding: 40px 30px;">
+            <div
+                style="background: rgba(var(--primary-rgb), 0.1); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 25px;">
+                <i data-lucide="help-circle" style="width: 40px; height: 40px; color: var(--primary);"></i>
+            </div>
+            <h2 style="font-weight: 800; margin-bottom: 10px;">XÁC NHẬN SẢN PHẨM</h2>
+            <p style="color: var(--text-dim); margin-bottom: 30px;">Bạn muốn thêm sản phẩm theo định dạng nào?</p>
+
+            <div style="display: grid; gap: 15px;">
+                <button class="btn-primary" onclick="proceedToAdd('dropbuy')"
+                    style="padding: 15px; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                    <i data-lucide="shopping-cart"></i> SẢN PHẨM DROPBUY (Mã số tự động)
+                </button>
+                <button class="btn-primary" onclick="proceedToAdd('non-dropbuy')"
+                    style="padding: 15px; border-radius: 12px; background: #0f172a; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                    <i data-lucide="plus-square"></i> HÀNG NGOÀI (Tự sinh mã Nxx)
+                </button>
+                <button class="btn-secondary" onclick="closeConfirmModal()" style="margin-top: 10px;">BỎ QUA</button>
+            </div>
+        </div>
+    </div>
+
+
+
+    <script>
+        let currentSheet = {{ (current_sheet if current_sheet else "") | tojson | safe }};
+        let prevSheet = currentSheet; // Lưu lại sheet trước đó để quay về
+        let currentHeaders = {{ (headers if headers else[]) | tojson | safe }};
+        let currentData = {{ (data if data else[]) | tojson | safe }};
+        let activeIdx = null;
+
+        const PALETTE = {
+            'mục lục': '#818cf8', 'balo': '#a78bfa', 'bàn': '#fb7185',
+            'bếp': '#fb923c', 'điện': '#22d3ee', 'dụng cụ': '#34d399',
+            'đồng hồ': '#fbbf24', 'khác': '#94a3b8'
+        };
+
+        const REQUIRED_FIELDS = [
+            'Tên sản phẩm', 'Slogan', 'Giá niêm yết', 'Link ảnh', 'Link sản phẩm',
+            'ID Shop', 'Tên Shop', 'Loại Shop', 'Phường/Xã',
+            'Quận/Huyện', 'Tỉnh/TP', 'Link Zalo', 'Link NV'
+        ];
+
+        const ALWAYS_VISIBLE = ['id sản phẩm', 'slug', 'slogan', ...REQUIRED_FIELDS.map(f => f.toLowerCase())];
+
+        const VI_LABELS = {
+            'id sản phẩm': 'Mã SP',
+            'tên sản phẩm': 'Tên SP',
+            'slogan': 'Khẩu hiệu',
+            'giá niêm yết': 'Giá bán',
+            'link ảnh': 'URL Ảnh',
+            'link sản phẩm': 'URL Web',
+            'id shop': 'Mã gian hàng',
+            'tên shop': 'Tên gian hàng',
+            'loại shop': 'Loại Shop',
+            'phường/xã': 'Địa chỉ 1',
+            'quận/huyện': 'Địa chỉ 2',
+            'tỉnh/tp': 'Địa chỉ 3',
+            'link zalo': 'Zalo',
+            'link nv': 'Hotline',
+            'unique id': 'ID Duy nhất',
+            'variation id': 'ID Biến thể',
+            'sku': 'Mã Kho',
+            'sku variation': 'Biến thể Kho',
+            'giá f1': 'Giá Gốc'
+        };
+
+        function applyTheme(name) {
+            let color = PALETTE['khác'];
+            for (const k in PALETTE) if (name.toLowerCase().includes(k)) { color = PALETTE[k]; break; }
+            document.documentElement.style.setProperty('--primary', color);
+            const brand = document.getElementById('brandText');
+            const title = document.getElementById('currentSheetTitle');
+            if (brand) brand.style.color = color;
+            if (title) title.style.color = color;
+        }
+
+        function refreshIcons() { setTimeout(() => lucide.createIcons(), 20); }
+
+        function isLink(text) {
+            if (typeof text !== 'string') return false;
+            const t = text.trim();
+            return t.startsWith('http://') || t.startsWith('https://');
+        }
+
+        // --- Navigation Logic ---
+
+        function showTableView() {
+            const table = document.getElementById('tableView');
+            const form = document.getElementById('formView');
+            if (table) table.style.display = 'block';
+            if (form) form.style.display = 'none';
+            const actions = document.querySelector('.actions-group');
+            if (actions) actions.style.visibility = 'visible';
+            refreshIcons();
+        }
+
+        function showFormView(title = "BIỂU MẪU") {
+            const table = document.getElementById('tableView');
+            const form = document.getElementById('formView');
+            if (table) table.style.display = 'none';
+            if (form) form.style.display = 'block';
+            document.getElementById('formViewTitle').innerText = title;
+            document.getElementById('targetSheetName').innerText = currentSheet;
+            const actions = document.querySelector('.actions-group');
+            if (actions) actions.style.visibility = 'hidden';
+            refreshIcons();
+        }
+
+        function goBackToPreviousSheet() {
+            showTableView();
+            if (prevSheet && prevSheet !== currentSheet) {
+                switchSheet(prevSheet);
+            }
+        }
+
+        // --- Confirmation Modal ---
+
+        function openAddModal() {
+            // Mục Lục sheet: Chuyển thẳng vào Tab view
+            if (currentSheet.toLowerCase().includes('mục lục')) {
+                activeIdx = null;
+                prevSheet = currentSheet;
+                showFormView("THÊM MỚI MỤC LỤC");
+                buildTabForm({}, false);
+                return;
+            }
+
+            // Sản phẩm: Hỏi loại trước
+            document.getElementById('confirmModal').style.display = 'flex';
+            refreshIcons();
+        }
+
+        function closeConfirmModal() { document.getElementById('confirmModal').style.display = 'none'; }
+
+        async function proceedToAdd(type) {
+            closeConfirmModal();
+            activeIdx = null;
+            prevSheet = currentSheet;
+
+            showFormView("THÊM SẢN PHẨM MỚI");
+
+            // Tạo form rỗng trước với placeholder loading cho ID
+            let initialVals = {};
+            initialVals['ID Sản phẩm'] = 'Đang lấy mã...';
+            buildTabForm(initialVals, (type === 'non-dropbuy'));
+
+            // Gọi API lấy mã ID tiếp theo (hỗ trợ cả dropbuy và non-dropbuy)
+            const endpoint = (type === 'non-dropbuy') ? 'non-dropbuy' : 'dropbuy';
+            try {
+                const res = await fetch(`/id-gen/${endpoint}/${encodeURIComponent(currentSheet)}`);
+                const out = await res.json();
+                if (out.status === 'success') {
+                    // Cập nhật giá trị ID vào input ngay lập tức
+                    const idInput = document.querySelector('input[name="ID Sản phẩm"]') || document.querySelector('input[name="ID sản phẩm"]');
+                    if (idInput) {
+                        idInput.value = out.next_id;
+                    }
+
+                    // Set auto-link placeholder for non-Dropbuy
+                    if (type === 'non-dropbuy') {
+                        const linkInput = document.querySelector('input[name="Link sản phẩm"]') || document.querySelector('input[name="link sản phẩm"]');
+                        if (linkInput) {
+                            linkInput.placeholder = 'Link được hệ thống sinh tự động';
+                            linkInput.readOnly = true;
+                            linkInput.style.opacity = '0.6';
+                            linkInput.style.cursor = 'not-allowed';
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Lỗi sinh ID:', e);
+                alert("Lỗi: Không thể tự động sinh mã ID. Hãy thử lại hoặc báo admin.");
+                goBackToPreviousSheet();
+            }
+        }
+
+        function handleEditClick(btn, idx) {
+            try {
+                const rowData = JSON.parse(btn.getAttribute('data-row'));
+                openEditModal(rowData, idx);
+            } catch (e) {
+                console.error("Lỗi parse data-row:", e);
+                // Fallback nếu parse fail
+                alert("Không thể mở form sửa. Vui lòng thử lại.");
+            }
+        }
+
+        function openEditModal(row, idx) {
+            activeIdx = idx;
+            prevSheet = currentSheet;
+            showFormView("SỬA THÔNG TIN SẢN PHẨM");
+            buildTabForm(row, false);
+        }
+
+        async function handleFileUpload(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const group = input.closest('.cms-field-group');
+            const preview = group.querySelector('.image-preview');
+            const hiddenUrlInput = group.querySelector('.image-url-input');
+            const placeholder = group.querySelector('.cms-upload-placeholder');
+
+            // Show local preview immediately
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+                if (placeholder) placeholder.style.display = 'none';
+                refreshIcons();
+            };
+            reader.readAsDataURL(file);
+
+            // Store file object and field name for deferred upload
+            const fieldName = hiddenUrlInput.getAttribute('name');
+            pendingImageUploads.push({ file, fieldName, hiddenUrlInput });
+
+            // Mark as pending upload
+            hiddenUrlInput.setAttribute('data-pending-upload', 'true');
+        }
+
+        async function handleMultipleFileUpload(input) {
+            const files = Array.from(input.files);
+            if (files.length === 0) return;
+
+            const group = input.closest('.cms-field-group');
+            const gallery = group.querySelector('.image-gallery');
+            const hiddenUrlInput = group.querySelector('.image-url-input');
+            const imageCount = group.querySelector('.image-count');
+            const fieldName = hiddenUrlInput.getAttribute('name');
+
+            // Process each file
+            for (const file of files) {
+                // Create gallery item
+                const galleryItem = document.createElement('div');
+                galleryItem.className = 'gallery-item';
+                galleryItem.setAttribute('data-pending', 'true');
+
+                // Show local preview immediately
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    galleryItem.innerHTML = `
+                        <img src="${e.target.result}" class="gallery-preview">
+                        <button type="button" class="gallery-delete-btn" onclick="deleteGalleryImage(this)" title="Xóa ảnh">×</button>
+                    `;
+                    refreshIcons();
+                };
+                reader.readAsDataURL(file);
+
+                gallery.appendChild(galleryItem);
+
+                // Store file object for deferred upload
+                pendingImageUploads.push({ file, fieldName, hiddenUrlInput, galleryItem });
+            }
+
+            // Update image count
+            const currentCount = gallery.querySelectorAll('.gallery-item').length;
+            imageCount.textContent = currentCount > 0 ? `(${currentCount} ảnh)` : '';
+
+            // Clear file input
+            input.value = '';
+        }
+
+        function deleteGalleryImage(btn) {
+            const galleryItem = btn.closest('.gallery-item');
+            const gallery = galleryItem.closest('.image-gallery');
+            const group = gallery.closest('.cms-field-group');
+            const hiddenUrlInput = group.querySelector('.image-url-input');
+            const imageCount = group.querySelector('.image-count');
+            const url = galleryItem.getAttribute('data-url');
+
+            // If this is a pending upload, remove from pending array
+            if (galleryItem.hasAttribute('data-pending')) {
+                const fieldName = hiddenUrlInput.getAttribute('name');
+                pendingImageUploads = pendingImageUploads.filter(item =>
+                    !(item.fieldName === fieldName && item.galleryItem === galleryItem)
+                );
+            } else if (url) {
+                // If this is an existing image, remove from hidden input
+                const currentUrls = hiddenUrlInput.value.split('|').filter(u => u.trim());
+                const newUrls = currentUrls.filter(u => u !== url);
+                hiddenUrlInput.value = newUrls.join('|');
+            }
+
+            // Remove gallery item
+            galleryItem.remove();
+
+            // Update image count
+            const remainingCount = gallery.querySelectorAll('.gallery-item').length;
+            imageCount.textContent = remainingCount > 0 ? `(${remainingCount} ảnh)` : '';
+        }
+
+        function toggleAdvancedFields(btn) {
+            const adv = document.getElementById('advancedFieldsGroup');
+            if (adv) {
+                const isHidden = adv.style.display === 'none';
+                adv.style.display = isHidden ? 'block' : 'none';
+                btn.innerText = isHidden ? '- THU GỌN TRƯỜNG DỮ LIỆU' : '+ XEM THÊM DỮ LIỆU';
+                refreshIcons();
+            }
+        }
+
+        // --- Form Building (Seamless v27.3) ---
+
+        async function buildTabForm(vals = {}, isNonDropbuy = false) {
+            // Fetch default values for new products (when vals is empty)
+            if (Object.keys(vals).length === 0) {
+                try {
+                    const res = await fetch('/api/defaults');
+                    const defaults = await res.json();
+                    if (defaults.link_zalo) vals['link zalo'] = defaults.link_zalo;
+                    if (defaults.link_nv) vals['link nv'] = defaults.link_nv;
+                } catch (err) {
+                    console.error('Error fetching defaults:', err);
+                }
+            }
+
+            const MAIN_FIELDS = ['tên sản phẩm', 'slogan', 'slug'];
+            const MEDIA_FIELDS = ['link ảnh', 'link_anh'];
+            const SYSTEM_FIELDS = ['id sản phẩm', 'giá niêm yết'];
+            const LOGISTIC_FIELDS = ['link sản phẩm', 'link zalo', 'link nv', 'tỉnh/tp', 'quận/huyện', 'phường/xã'];
+
+            const CATALOG_FIELDS = ['tên mục lục', 'link zalo', 'link nv'];
+            const catalogHtml = [];
+            const mainInfoHtml = [], mediaHtml = [], systemHtml = [], logisticHtml = [], otherVisibleHtml = [], advancedFieldsHtml = [];
+
+            currentHeaders.forEach(h => {
+                const header = h.trim();
+                const normH = header.toLowerCase();
+                const isReq = REQUIRED_FIELDS.some(r => r.toLowerCase() === normH) || CATALOG_FIELDS.includes(normH);
+                const isIdField = normH.includes('id sản phẩm');
+                const isSlogan = normH === 'slogan';
+                const isSlug = normH === 'slug';
+                const isImage = normH === 'link ảnh' || normH === 'link_anh';
+                const isProvince = normH === 'tỉnh/tp';
+                const isDistrict = normH === 'quận/huyện';
+                const isWard = normH === 'phường/xã';
+                const isAddress = isProvince || isDistrict || isWard;
+                const isVisible = ALWAYS_VISIBLE.includes(normH);
+
+                let aiBtn = '';
+                if (isSlogan) aiBtn = `<button type="button" class="ai-magic-btn" onclick="genSloganAI(this)">AI SLOGAN</button>`;
+                else if (isSlug) aiBtn = `<button type="button" class="ai-magic-btn" onclick="genSlugAI(this)">AI SLUG</button>`;
+
+                let html = '';
+                if (isImage) {
+                    const currentUrls = vals[header] || '';
+                    const urlArray = currentUrls ? currentUrls.split('|').filter(u => u.trim()) : [];
+
+                    html = `<div class="cms-field-group" style="margin-bottom: 50px;">
+                        <label class="cms-field-label">${header}${isReq ? '<span class="required-badge">Bắt buộc</span>' : ''} <span class="image-count">${urlArray.length > 0 ? `(${urlArray.length} ảnh)` : ''}</span></label>
+                        <input type="hidden" name="${header}" class="image-url-input" value="${currentUrls}">
+                        
+                        <!-- Image Gallery -->
+                        <div class="image-gallery" data-field="${header}">
+                            ${urlArray.map((url, idx) => `
+                                <div class="gallery-item" data-url="${url}">
+                                    <img src="${url}" class="gallery-preview">
+                                    <button type="button" class="gallery-delete-btn" onclick="deleteGalleryImage(this)" title="Xóa ảnh">×</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                        
+                        <!-- Add Images Button -->
+                        <div class="cms-upload-hero add-images-btn" onclick="this.querySelector('input').click()">
+                            <input type="file" accept="image/*" multiple style="display:none;" onchange="handleMultipleFileUpload(this)">
+                            <div class="cms-upload-placeholder" style="display:flex">
+                                <span style="font-size:15px; font-weight:800; color:var(--text-dim); letter-spacing:0.1em;">+ THÊM ẢNH</span>
+                            </div>
+                        </div>
+                    </div>`;
+                } else if (isAddress) {
+                    // Render address fields as dropdowns
+                    const currentValue = vals[header] || '';
+                    let dataType = '';
+                    if (isProvince) dataType = 'province';
+                    else if (isDistrict) dataType = 'district';
+                    else if (isWard) dataType = 'ward';
+
+                    html = `<div class="cms-field-group">
+                        <label class="cms-field-label">${header}${isReq ? '<span class="required-badge">Bắt buộc</span>' : ''}</label>
+                        <select name="${header}" class="cms-input address-select" data-address-type="${dataType}" ${isReq ? 'required' : ''}>
+                            <option value="">-- Chọn ${header} --</option>
+                            ${currentValue ? `<option value="${currentValue}" selected>${currentValue}</option>` : ''}
+                        </select>
+                    </div>`;
+                } else {
+                    html = `<div class="cms-field-group">
+                        <label class="cms-field-label">${header}${isReq ? '<span class="required-badge">Bắt buộc</span>' : ''}</label>
+                        <input type="text" name="${header}" value="${vals[header] || ''}" class="cms-input"
+                            placeholder="..." ${isReq ? 'required' : ''} ${isIdField ? 'readonly' : ''}>
+                        ${aiBtn}
+                    </div>`;
+                }
+
+                if (currentSheet.toLowerCase().includes('mục lục')) {
+                    if (normH.includes('mục lục') || CATALOG_FIELDS.includes(normH)) catalogHtml.push(html);
+                    else advancedFieldsHtml.push(html);
+                } else {
+                    if (MAIN_FIELDS.includes(normH)) mainInfoHtml.push(html);
+                    else if (MEDIA_FIELDS.includes(normH)) mediaHtml.push(html);
+                    else if (SYSTEM_FIELDS.includes(normH)) systemHtml.push(html);
+                    else if (LOGISTIC_FIELDS.includes(normH)) logisticHtml.push(html);
+                    else if (isVisible || isReq) otherVisibleHtml.push(html);
+                    else advancedFieldsHtml.push(html);
+                }
+            });
+
+            const renderFlatList = (title, content, gridClass = 'grid-cols-1') => `
+                <div class="cms-section">
+                    <div class="cms-section-title">
+                        <h3 style="font-size:14px; font-weight:800; color:var(--text-main);">${title}</h3>
+                    </div>
+                    <div class="cms-form-grid ${gridClass}">
+                        ${content.join('')}
+                    </div>
+                </div>`;
+
+            let finalHtml = '';
+            if (currentSheet.toLowerCase().includes('mục lục')) {
+                finalHtml = `
+                    <div class="cms-layout-container">
+                        <div class="cms-main-col">
+                            ${renderFlatList('THÔNG TIN MỤC LỤC', catalogHtml)}
+                        </div>
+                        <div class="cms-side-col">
+                            <div style="background: rgba(var(--primary-rgb), 0.05); padding:30px; border-radius:15px; border: 1px dashed var(--primary);">
+                                <h4 style="font-size:12px; font-weight:900; color:var(--primary); margin-bottom:15px;">HƯỚNG DẪN</h4>
+                                <p style="font-size:14px; opacity:0.8; line-height:1.6;">Tạo danh mục mới để phân loại sản phẩm. Các trường có dấu * là bắt buộc.</p>
+                            </div>
+                        </div>
+                    </div>`;
+            } else {
+                finalHtml = `
+                <div class="cms-layout-container">
+                    <div class="cms-main-col">
+                        ${renderFlatList('THÔNG TIN ĐỊNH DANH', mainInfoHtml)}
+                        ${renderFlatList('QUẢN LÝ HÌNH ẢNH', mediaHtml)}
+                        ${otherVisibleHtml.length ? renderFlatList('DỮ LIỆU BỔ SUNG', otherVisibleHtml, 'grid-cols-2') : ''}
+                    </div>
+                    <div class="cms-side-col">
+                        ${renderFlatList('CẤU HÌNH HỆ THỐNG', systemHtml)}
+                        ${renderFlatList('THÔNG TIN VẬN CHUYỂN', logisticHtml)}
+                        ${advancedFieldsHtml.length ? `
+                        <div style="margin-top: 20px;">
+                            <button type="button" class="btn-secondary" onclick="toggleAdvancedFields(this)" 
+                                style="width:100%; border:2px solid var(--border); background:transparent; padding:18px; border-radius:12px; color:var(--text-main); font-weight:800; text-transform:uppercase; letter-spacing:0.1em;">
+                                + XEM THÊM DỮ LIỆU
+                            </button>
+                            <div id="advancedFieldsGroup" style="display:none; margin-top:80px;">
+                                ${renderFlatList('THÔNG TIN NÂNG CAO', advancedFieldsHtml)}
+                            </div>
+                        </div>` : ''}
+                    </div>
+                </div>`;
+            }
+
+            document.getElementById('tabFormFields').innerHTML = finalHtml;
+            refreshIcons();
+
+            // Setup address cascade if address fields exist
+            setupAddressCascade();
+        }
+
+        // --- Address Cascade Functions ---
+
+        async function loadProvinces(selectElement) {
+            try {
+                const res = await fetch('/api/provinces');
+                const provinces = await res.json();
+
+                selectElement.innerHTML = '<option value="">-- Chọn Tỉnh/TP --</option>';
+                provinces.forEach(p => {
+                    const option = document.createElement('option');
+                    option.value = p.name;
+                    option.setAttribute('data-code', p.code);
+                    option.textContent = p.name;
+                    selectElement.appendChild(option);
+                });
+            } catch (err) {
+                console.error('Error loading provinces:', err);
+            }
+        }
+
+        async function loadDistricts(provinceCode, selectElement) {
+            try {
+                const res = await fetch(`/api/districts/${provinceCode}`);
+                const districts = await res.json();
+
+                selectElement.innerHTML = '<option value="">-- Chọn Quận/Huyện --</option>';
+                districts.forEach(d => {
+                    const option = document.createElement('option');
+                    option.value = d.name;
+                    option.setAttribute('data-code', d.code);
+                    option.textContent = d.name;
+                    selectElement.appendChild(option);
+                });
+                selectElement.disabled = false;
+            } catch (err) {
+                console.error('Error loading districts:', err);
+            }
+        }
+
+        async function loadWards(districtCode, selectElement) {
+            try {
+                const res = await fetch(`/api/wards/${districtCode}`);
+                const wards = await res.json();
+
+                selectElement.innerHTML = '<option value="">-- Chọn Phường/Xã --</option>';
+                wards.forEach(w => {
+                    const option = document.createElement('option');
+                    option.value = w.name;
+                    option.textContent = w.name;
+                    selectElement.appendChild(option);
+                });
+                selectElement.disabled = false;
+            } catch (err) {
+                console.error('Error loading wards:', err);
+            }
+        }
+
+        function setupAddressCascade() {
+            const provinceSelect = document.querySelector('.address-select[data-address-type="province"]');
+            const districtSelect = document.querySelector('.address-select[data-address-type="district"]');
+            const wardSelect = document.querySelector('.address-select[data-address-type="ward"]');
+
+            if (!provinceSelect) return; // No address fields in this form
+
+            // Load provinces on form load
+            loadProvinces(provinceSelect);
+
+            // Disable district and ward initially
+            if (districtSelect) districtSelect.disabled = true;
+            if (wardSelect) wardSelect.disabled = true;
+
+            // Province change → Load districts
+            provinceSelect.addEventListener('change', function () {
+                const selectedOption = this.options[this.selectedIndex];
+                const provinceCode = selectedOption.getAttribute('data-code');
+
+                if (provinceCode && districtSelect) {
+                    loadDistricts(provinceCode, districtSelect);
+                    if (wardSelect) {
+                        wardSelect.innerHTML = '<option value="">-- Chọn Phường/Xã --</option>';
+                        wardSelect.disabled = true;
+                    }
+                }
+            });
+
+            // District change → Load wards
+            if (districtSelect) {
+                districtSelect.addEventListener('change', function () {
+                    const selectedOption = this.options[this.selectedIndex];
+                    const districtCode = selectedOption.getAttribute('data-code');
+
+                    if (districtCode && wardSelect) {
+                        loadWards(districtCode, wardSelect);
+                    }
+                });
+            }
+        }
+
+        // --- Core Functions (Global) ---
+
+        async function switchSheet(name) {
+            if (name === 'BIỂU MẪU') return; // Không switch trực tiếp vào biểu mẫu
+
+            showTableView();
+            currentSheet = name;
+            applyTheme(name);
+            document.querySelectorAll('.sheet-item').forEach(el => el.classList.toggle('active', el.getAttribute('data-name') === name));
+            document.getElementById('currentSheetTitle').innerText = name;
+
+            const addBtn = document.querySelector('.actions-group .btn-primary');
+            if (name.toLowerCase().includes('mục lục')) {
+                addBtn.innerText = 'THÊM MỤC LỤC MỚI';
+            } else {
+                addBtn.innerText = 'THÊM MỚI SẢN PHẨM';
+            }
+
+            try {
+                const res = await fetch(`/sheet/${encodeURIComponent(name)}`);
+                const out = await res.json();
+                if (out.status === 'success') {
+                    currentHeaders = out.headers;
+                    currentData = out.data;
+                    renderTable(out.headers, out.data);
+                } else { alert('Lỗi: ' + out.message); }
+            } catch (e) { console.error(e); }
+        }
+
+        function renderTable(headers, rows) {
+            const head = document.getElementById('tableHead');
+            const body = document.getElementById('tableBody');
+            if (!head || !body) return;
+
+            head.innerHTML = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}<th style="text-align: center;">Thao tác</th></tr>`;
+
+            body.innerHTML = rows.map((r, i) => {
+                const idx = i + 2;
+                const rowJson = JSON.stringify(r).replace(/'/g, "&apos;");
+                return `<tr>${headers.map(h => {
+                    const val = r[h] || '';
+                    const displayVal = isLink(val.toString()) ? `<a href="${val}" target="_blank" class="table-link">${val}</a>` : val;
+                    return `<td>${displayVal}</td>`;
+                }).join('')}<td>
+                    <button class="btn-action btn-edit" data-row='${rowJson}' onclick="handleEditClick(this, ${idx})">
+                        <i data-lucide="edit-3"></i>
+                    </button>
+                    <button class="btn-action btn-delete" onclick="deleteRow(${idx})">
+                        <i data-lucide="trash-2"></i>
+                    </button>
+                </td></tr>`;
+            }).join('');
+            document.getElementById('recordCount').innerText = `${rows.length} bản ghi`;
+            refreshIcons();
+        }
+
+        // --- Form Submission ---
+
+        document.getElementById('tabProductForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+
+            const btn = document.getElementById('tabSaveBtn');
+            btn.disabled = true; btn.innerText = 'ĐANG XỬ LÝ...';
+
+            let url = '';
+            let isCatalog = currentSheet.toLowerCase().includes('mục lục');
+
+            if (isCatalog) {
+                url = '/catalog/create';
+                // Mapping sang các key mà backend create_catalog mong đợi
+                const catalogPayload = {
+                    ten_muc_luc: data['Tên Sheet'] || data['tên sheet'] || data['ten_muc_luc'] || '',
+                    link_zalo: data['Link Zalo'] || data['link zalo'] || data['link_zalo'] || '',
+                    link_nv: data['Link NV'] || data['link nv'] || data['link_nv'] || ''
+                };
+
+                try {
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(catalogPayload)
+                    });
+                    const out = await res.json();
+                    if (out.status === 'success') {
+                        alert('✅ Đã tạo mục lục thành công!');
+                        goBackToPreviousSheet();
+                        setTimeout(() => switchSheet(out.sheet_name), 500);
+                    } else { alert(out.message); }
+                } catch (err) { alert(err); } finally { btn.disabled = false; btn.innerText = 'LƯU DỮ LIỆU'; }
+                return;
+            }
+
+            url = activeIdx ? `/sheet/${encodeURIComponent(currentSheet)}/update/${activeIdx}` : `/sheet/${encodeURIComponent(currentSheet)}/add`;
+
+            if (!activeIdx) {
+                const idMoi = (data['ID Sản phẩm'] || data['ID sản phẩm'] || '').toString().trim();
+                if (currentData.some(row => (row['ID Sản phẩm'] || row['ID sản phẩm'] || '').toString().trim() === idMoi)) {
+                    alert(`❌ LỖI: ID sản phẩm "${idMoi}" đã tồn tại!`);
+                    btn.disabled = false; btn.innerText = 'LƯU DỮ LIỆU';
+                    return;
+                }
+            }
+
+            try {
+                const res = await fetch(url, { method: 'POST', body: formData });
+                const out = await res.json();
+                if (out.status === 'success') {
+                    alert('✅ Đã lưu thành công!');
+                    goBackToPreviousSheet();
+                    switchSheet(currentSheet);
+                } else { alert(out.message); }
+            } catch (err) { alert(err); } finally { btn.disabled = false; btn.innerText = 'LƯU DỮ LIỆU'; }
+        };
+
+        // Modal-related functions are no longer needed
+        function closeModal() { }
+
+        async function deleteRow(idx) {
+            if (!confirm('Xóa vĩnh viễn dòng này?')) return;
+            try {
+                const res = await fetch(`/sheet/${encodeURIComponent(currentSheet)}/delete/${idx}`, { method: 'POST' });
+                const out = await res.json();
+                if (out.status === 'success') switchSheet(currentSheet);
+            } catch (e) { alert(e); }
+        }
+
+        // --- AI Helpers ---
+        async function genSloganAI(btn) {
+            const nameInput = document.querySelector('#tabProductForm input[name="Tên sản phẩm"]');
+            const sloganInput = document.querySelector('#tabProductForm input[name="Slogan"]');
+            if (!nameInput || !nameInput.value.trim()) { alert('Nhập "Tên sản phẩm" trước!'); return; }
+            btn.disabled = true; btn.innerHTML = '<i data-lucide="loader-2" class="spin"></i> ...';
+            refreshIcons();
+            try {
+                const res = await fetch('/ai/generate-slogan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ product_name: nameInput.value.trim() }) });
+                const out = await res.json();
+                if (out.status === 'success') sloganInput.value = out.slogan;
+            } catch (err) { alert(err); } finally { btn.disabled = false; btn.innerHTML = 'AI MAGIC'; refreshIcons(); }
+        }
+
+        async function genSlugAI(btn) {
+            const nameInput = document.querySelector('#tabProductForm input[name="Tên sản phẩm"]');
+            const slugInput = document.querySelector('#tabProductForm input[name="Slug"]') || document.querySelector('#tabProductForm input[name="slug"]');
+            if (!nameInput || !nameInput.value.trim()) { alert('Nhập "Tên sản phẩm" trước!'); return; }
+            btn.disabled = true; btn.innerHTML = '<i data-lucide="loader-2" class="spin"></i> ...';
+            refreshIcons();
+            try {
+                const res = await fetch('/ai/generate-slug', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ product_name: nameInput.value.trim() }) });
+                const out = await res.json();
+                if (out.status === 'success') slugInput.value = out.slug;
+            } catch (err) { alert(err); } finally { btn.disabled = false; btn.innerHTML = 'AI MAGIC'; refreshIcons(); }
+        }
+
+        // Init search logic
+        document.getElementById('sheetSearch').oninput = (e) => {
+            const v = e.target.value.toLowerCase();
+            document.querySelectorAll('.sheet-item').forEach(el => {
+                el.style.display = el.innerText.toLowerCase().includes(v) ? '' : 'none';
+            });
+        };
+
+        document.getElementById('productSearch').oninput = (e) => {
+            const v = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll('#tableBody tr');
+            let count = 0;
+            rows.forEach(r => {
+                const match = r.innerText.toLowerCase().includes(v);
+                r.style.display = match ? '' : 'none';
+                if (match) count++;
+            });
+            document.getElementById('recordCount').innerText = `${count} bản ghi`;
+        };
+
+        // Initial setup
+        applyTheme(currentSheet);
+        refreshIcons();
+
+        // Track pending image uploads
+        let pendingImageUploads = [];
+
+        // Form submit handler: Upload all pending images to Cloudinary before saving
+        document.getElementById('tabProductForm').onsubmit = async function (e) {
+            e.preventDefault();
+
+            // If there are pending image uploads, upload them first
+            if (pendingImageUploads.length > 0) {
+                const uploadBtn = document.getElementById('tabSaveBtn');
+                const originalText = uploadBtn.innerText;
+                uploadBtn.disabled = true;
+                uploadBtn.innerText = 'ĐANG TẢI ẢNH LÊN...';
+
+                try {
+                    for (const { file, fieldName, hiddenUrlInput } of pendingImageUploads) {
+                        const formData = new FormData();
+                        formData.append('file', file);
+
+                        const res = await fetch('/upload', { method: 'POST', body: formData });
+                        const out = await res.json();
+
+                        if (out.status === 'success') {
+                            hiddenUrlInput.value = out.url;
+                            hiddenUrlInput.removeAttribute('data-pending-upload');
+                        } else {
+                            throw new Error(out.message || 'Upload failed');
+                        }
+                    }
+
+                    // Clear pending uploads after successful upload
+                    pendingImageUploads = [];
+
+                } catch (err) {
+                    uploadBtn.disabled = false;
+                    uploadBtn.innerText = originalText;
+                    alert('Lỗi upload ảnh: ' + err.message);
+                    return;
+                }
+
+                uploadBtn.innerText = originalText;
+                uploadBtn.disabled = false;
+            }
+
+            // Now submit the form data to backend
+            const formData = new FormData(e.target);
+            const payload = {};
+            formData.forEach((v, k) => payload[k] = v);
+
+            try {
+                const endpoint = activeIdx !== null
+                    ? `/sheet/${encodeURIComponent(currentSheet)}/${activeIdx}`
+                    : `/sheet/${encodeURIComponent(currentSheet)}`;
+                const method = activeIdx !== null ? 'PUT' : 'POST';
+
+                const res = await fetch(endpoint, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const out = await res.json();
+                if (out.status === 'success') {
+                    alert('Lưu thành công!');
+                    switchSheet(currentSheet);
+                } else {
+                    alert('Lỗi: ' + (out.message || 'Không xác định'));
+                }
+            } catch (err) {
+                alert('Lỗi kết nối server.');
+                console.error(err);
+            }
+        };
+    </script>
+</body>
+
+</html>
