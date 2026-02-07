@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SheetFlow - Smart Inventory</title>
+    <title>BeenetData - Smart Inventory</title>
     <link rel="icon" href="/static/bot-logo.jpg" type="image/jpeg">
     <link rel="stylesheet" href="/static/style.css?v=15">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
@@ -16,11 +16,11 @@
         style="display: flex; align-items: center; justify-content: center; gap: 12px; padding: 20px 0;">
         <div class="brand-logo-container"
             style="background: white; padding: 6px; border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex;">
-            <img src="/static/bot-logo.jpg" alt="SheetFlow Logo"
+            <img src="/static/bot-logo.jpg" alt="BeenetData Logo"
                 style="height: 40px; width: 40px; border-radius: 50%; object-fit: cover;">
         </div>
         <span
-            style="font-size: 20px; font-weight: 900; background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.5px;">SheetFlow</span>
+            style="font-size: 20px; font-weight: 900; background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.5px;">BeenetData</span>
     </div>
     <div class="sidebar-content">
         <div class="nav-label">Tìm danh mục</div>
@@ -46,7 +46,10 @@
             <h1 id="currentSheetTitle">{{ current_sheet if current_sheet else "Tổng quan" }}</h1>
             <span id="recordCount">{{ data|length if data else 0 }} bản ghi</span>
         </div>
-        <div class="actions-group" style="display: flex; gap: 15px;">
+        <div class="actions-group" style="display: flex; gap: 15px; align-items: center;">
+            <a href="/logout"
+                style="padding: 8px 16px; background: #e74c3c; color: white; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 600;">Đăng
+                xuất</a>
             {% if error %}
             <div
                 style="background: #fee2e2; color: #b91c1c; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600;">

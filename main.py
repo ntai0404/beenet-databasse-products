@@ -3,10 +3,11 @@ import cloudinary.uploader
 from cloudinary.utils import cloudinary_url
 from dotenv import load_dotenv
 import os
-from fastapi import FastAPI, Request, File, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import FastAPI, Request, File, UploadFile, Form, HTTPException
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.middleware.sessions import SessionMiddleware
 from typing import Dict, Any
 from openai import OpenAI
 
@@ -44,12 +45,43 @@ if os.path.exists(CREDENTIALS_PATH) and SHEET_URL:
 # FastAPI App
 app = FastAPI(title="SheetFlow Multi-Sheet CRUD")
 
+# Session Middleware (simple secret key)
+app.add_middleware(SessionMiddleware, secret_key="your-secret-key-change-in-production")
+
 # Static and Templates
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
+# Simple auth credentials
+ADMIN_USERNAME = "admin"
+ADMIN_PASSWORD = "admin"
+
+# Login page
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
+
+# Login endpoint
+@app.post("/login")
+async def login(request: Request, username: str = Form(...), password: str = Form(...)):
+    if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+        request.session["authenticated"] = True
+        return {"status": "success"}
+    return JSONResponse(content={"status": "error", "message": "Sai tên đăng nhập hoặc mật khẩu"}, status_code=401)
+
+# Logout endpoint
+@app.get("/logout")
+async def logout(request: Request):
+    request.session.clear()
+    return RedirectResponse(url="/login")
+
+# Main page (protected)
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
+    # Check authentication
+    if not request.session.get("authenticated"):
+        return RedirectResponse(url="/login")
+    
     if not sheets_service:
         return templates.TemplateResponse("index.html", {
             "request": request, 
