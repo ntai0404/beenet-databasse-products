@@ -108,6 +108,14 @@ async def add_item(sheet_name: str, request: Request):
     except Exception as e:
         return JSONResponse(content={"status": "error", "message": str(e)}, status_code=500)
 
+@app.post("/sheet/{sheet_name}")
+async def add_item_fallback(sheet_name: str, request: Request):
+    """
+    Fallback endpoint to handle POST requests to base sheet URL.
+    Treats them as 'add new row' requests.
+    """
+    return await add_item(sheet_name, request)
+
 @app.post("/sheet/{sheet_name}/update/{row_id}")
 async def update_item(sheet_name: str, row_id: int, request: Request):
     if not sheets_service:
@@ -134,6 +142,16 @@ async def delete_item(sheet_name: str, row_id: int):
     except Exception as e:
         return JSONResponse(content={"status": "error", "message": str(e)}, status_code=500)
 
+@app.get("/api/defaults")
+async def get_defaults():
+    """
+    Lấy giá trị mặc định cho các trường contact (Link Zalo, Link NV)
+    """
+    return {
+        "link_zalo": os.getenv("DEFAULT_LINK_ZALO", ""),
+        "link_nv": os.getenv("DEFAULT_LINK_NV", "")
+    }
+
 @app.post("/ai/generate-slogan")
 async def generate_slogan(request: Request):
     if not ai_client:
@@ -156,6 +174,7 @@ async def generate_slogan(request: Request):
         slogan = response.choices[0].message.content.strip()
         return {"status": "success", "slogan": slogan}
     except Exception as e:
+        print(f"DEBUG: AI Slogan Error: {e}")
         return JSONResponse(content={"status": "error", "message": str(e)}, status_code=500)
 
 @app.post("/ai/generate-slug")
@@ -172,7 +191,7 @@ async def generate_slug(request: Request):
         response = ai_client.chat.completions.create(
             model="deepseek-chat",
             messages=[
-                {"role": "system", "content": "Bạn là chuyên gia viết lách và marketing sáng tạo. Hãy viết 1 đoạn mô tả sản phẩm ngắn gọn nhưng cực kỳ thú vị và gây tò mò cho người đọc (khoảng 10-20 từ) dựa trên tên sản phẩm sau. Chỉ trả về duy nhất nội dung mô tả, không kèm dấu ngoặc kép hay lời dẫn."},
+                {"role": "system", "content": "Bạn là chuyên gia về Content Marketing và kể chuyện (storytelling). Hãy viết 1 câu mô tả sản phẩm cực kỳ sinh động, cuốn hút và gợi hình (khoảng 15-25 từ) để kích thích mong muốn sở hữu của người đọc. Chỉ trả về duy nhất nội dung mô tả, không kèm tiêu đề, dấu ngoặc kép hay lời dẫn."},
                 {"role": "user", "content": product_name}
             ],
             stream=False
@@ -180,6 +199,7 @@ async def generate_slug(request: Request):
         slug = response.choices[0].message.content.strip()
         return {"status": "success", "slug": slug}
     except Exception as e:
+        print(f"DEBUG: AI Slug Error: {e}")
         return JSONResponse(content={"status": "error", "message": str(e)}, status_code=500)
 
 @app.post("/catalog/create")
