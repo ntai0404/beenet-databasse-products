@@ -1,49 +1,59 @@
-# Thiết kế Front-end (FE) - SheetFlow 2.0
+# Frontend Experience & Interface Design - SpentCMS 2.0
 
-Giao diện được thiết kế để xử lý lượng lớn danh mục (Multi-sheet) với trải nghiệm người dùng tối ưu.
+SpentCMS 2.0 tập trung vào trải nghiệm người dùng (UX) tối giản nhưng mạnh mẽ, với khả năng thích ứng linh hoạt theo cấu trúc dữ liệu từ Google Sheets.
 
-## 🎨 Hệ thống Giao diện Động (Dynamic UI System)
+## 🏗️ Kiến trúc Giao diện (UI Architecture)
 
-### 1. Adaptive Color Palette
-- Sử dụng **CSS Variables** (`--primary`, `--accent`, `--bg`) để tự động điều chỉnh màu sắc theo danh mục.
+Hệ thống được xây dựng trên mô hình **Single Page Application (SPA)** thuần túy, không phụ thuộc vào các framework nặng nề, đảm bảo tốc độ tải trang cực nhanh.
 
-### 2. Glassmorphism & Adaptive Blur
-- Hiệu ứng kính mờ cho các thành phần nổi, đảm bảo thẩm mỹ hiện đại và độ tương phản tốt.
+```mermaid
+graph LR
+    A[index.html] --> B[Dynamic Layout Engine]
+    B --> C[Sidebar Component]
+    B --> D[Data Table View]
+    B --> E[Tab-based CMS Form]
+    E --> F[Multi-Media Gallery]
+    E --> G[Smart Address Cascade]
+```
 
-## 🏗 Giải pháp Điều hướng Đa danh mục (Smart Navigation)
+## 🎨 Hệ thống Thiết kế (Design System)
 
-### 1. Sidebar "Thông minh"
-- **Quick Search Filter**: Lọc danh mục nhanh chóng.
-- **Tab Persistence**: Ghi nhớ tab đang truy cập khi chuyển đổi.
+### 1. Nguyên lý Visual Hierarchy
+- **Layered Design**: Sử dụng hệ thống đổ bóng (layered shadows) và bo góc lớn (16px - 24px) để tạo chiều sâu cho các Card.
+- **Glassmorphism**: Hiệu ứng kính mờ (backdrop-filter) áp dụng cho Sidebar và Modals, tạo cảm giác sang trọng và hiện đại.
+- **Micro-interactions**: Các hiệu ứng hover, transition 0.25s mượt mà trên mọi nút bấm và trường nhập liệu.
 
-### 2. Tab Biểu mẫu (Professional CMS Layout - v27.0)
-- **Thay thế Modal**: Mọi thao tác Thêm/Sửa sẽ diễn ra trong Tab "BIỂU MẪU" với không gian rộng rãi.
-- **Cấu trúc Bất đối xứng (70/30)**: Thay thế grid đơn giản bằng bố cục Dashboard chuyên nghiệp.
-    - **Cột Chính (70%)**: Chứa Card "Thông tin sản phẩm" và Card "Truyền thông" (Gallery ảnh).
-    - **Sidebar (30%)**: Chứa Card "Hệ thống" (ID Sản phẩm, Giá) và Card "Vận chuyển/Shop".
-- **Visual Hierarchy**: 
-    - Card-based UI với layered shadows, bo góc 16px.
-    - **Red Badges**: Thay thế dấu `*` truyền thống bằng badge "Bắt buộc" màu đỏ nổi bật cho các trường cần thiết.
+### 2. Hệ quản trị Màu sắc (Adaptive Colors)
+Sử dụng **CSS Variables** toàn cục để dễ dàng thay đổi theme:
+- `--primary`: Màu chủ đạo (Indigo/Primary).
+- `--bg-main`: Màu nền thích ứng Light/Dark mode.
+- `--card-bg`: Màu nền thẻ, tối ưu độ tương phản.
+- **Red Badges**: Badge "Bắt buộc" thay thế dấu `*` truyền thống, giúp người dùng nhận diện nhanh các trường thông tin quan trọng.
 
-## 🧩 Các thành phần UI chi tiết
+## ⚙️ Engine Xử lý Form Động (Dynamic Form Engine)
 
-### 1. Data Viewport (Vùng dữ liệu)
-- **Horizontal Scrolling**: Cố định cột "Thao tác" và "Tên sản phẩm".
+Đây là "trái tim" của hệ thống, cho phép tự động sinh giao diện từ header Google Sheets:
 
-### 2. Media Gallery (Multiple Image Upload - v30.0)
-- **Multi-select**: Hỗ trợ chọn đồng thời nhiều ảnh để upload qua Cloudinary.
-- **Gallery Grid**: Hiển thị lưới các ảnh đã chọn/đã có với nút xóa riêng biệt từng ảnh.
-- **Pipe-Separated URLs**: Tự động chuyển đổi danh sách ảnh thành chuỗi `url1|url2|url3` để lưu trữ.
+### 1. Phân loại Trường dữ liệu thông minh
+Hệ thống sử dụng Regex và Mapping để tự động hiển thị đúng UI Component:
+- **Media**: Tự động nhận diện `link ảnh` -> Render Gallery.
+- **Address**: Nhận diện `tỉnh/tp`, `quận/huyện` -> Render Cascading Dropdowns.
+- **AI Fields**: Nhận diện `slogan`, `slug` -> Render nút "AI MAGIC".
+- **Contact**: `Link Zalo`, `Link NV` -> Tự động điền (Auto-fill) giá trị mặc định.
 
-### 3. Smart Address Logic (Cascading Dropdowns - v29.0)
-- **Hành chính công**: Thay thế ô nhập text tự do bằng 3 dropdown: Tỉnh/TP -> Quận/Huyện -> Phường/Xã.
-- **Auto-cascade**: Dữ liệu được load động từ backend proxy; Quận/Huyện chỉ mở sau khi chọn Tỉnh/TP.
+### 2. Media Gallery (v30.0)
+- **Gallery Grid Layout**: Hiển thị ảnh theo dạng lưới trực quan.
+- **Individual Control**: Mỗi ảnh có nút xóa riêng, quản lý trực tiếp trạng thái trước khi lưu.
+- **Pipe-logic**: Tự động serialize danh sách ảnh thành chuỗi `|` để tối ưu hóa lưu trữ trong 1 ô GSheet.
 
-### 4. AI Magic Buttons
-- **Tường minh hơn**: Đổi tên các nút AI chung chung thành "AI SLOGAN" và "AI SLUG" để người dùng dễ nhận biết tính năng.
+### 3. Smart Address Logic (v29.0)
+Hệ thống sử dụng logic tầng (Cascading):
+- **Tỉnh/TP** (Input) -> Trigger Load **Quận/Huyện**.
+- **Quận/Huyện** (Input) -> Trigger Load **Phường/Xã**.
+- Dữ liệu được lấy trực tiếp từ Backend Proxy để đảm bảo tính sẵn sàng cao (High Availability).
 
-### 5. Dynamic Forms (Tab-based)
-- **Auto-fill Defaults**: Tự động điền "Link Zalo" và "Link NV" từ cấu hình mặc định khi tạo mới sản phẩm.
-- **Product Type Selection**: Popup xác nhận "Dropbuy / Non-Dropbuy" trước khi nhảy sang Tab Biểu mẫu.
-- **Pre-fetch ID Tức thì**: Gọi API lấy mã ID (Nxx hoặc Dropbuy) ngay khi khởi tạo tab để điền sẵn cho người dùng.
-- **Back Navigation**: Nút "Hủy" hoặc sau khi "Lưu" sẽ đưa người dùng quay lại Tab sản phẩm trước đó.
+## 🚀 Chiến lược Hiệu suất (Performance)
+
+- **Lazy Rendering**: Chỉ render nội dung tab khi người dùng chuyển tab.
+- **Deferred Uploads**: Ảnh được giữ ở bộ nhớ đệm (Object URL) và chỉ upload lên Cloudinary khi người dùng nhấn "Lưu", giúp tiết kiệm băng thông và tài nguyên server.
+- **No Reflow Scrolling**: Cố định cột thao tác (Action Column) giúp người dùng quản lý dữ liệu dễ dàng trên các bảng có hàng chục cột.

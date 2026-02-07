@@ -1,39 +1,51 @@
-## 📑 1. Kịch bản Điều hướng & Tìm kiếm Danh mục
-- **Mô tả**: Người dùng đối mặt với hàng chục danh mục sản phẩm.
-- **Thao tác**: 
-  - Gõ từ khóa vào ô Search trên Sidebar hoặc dùng Quick Switcher.
-  - Chọn danh mục từ danh sách đã được lọc.
-- **Kết quả**: Hệ thống chuyển đổi sheet tức thì, bảng dữ liệu tự động thay đổi cấu trúc tương ứng.
+# User Experience Scenarios (Usecases) - SpentCMS 2.0
 
-## ➕ 2. Kịch bản Quản lý Dữ liệu linh hoạt
+Tài liệu này mô tả các tình huống thực tế mà người quản trị (CTV) sẽ thực hiện trên SpentCMS 2.0, minh họa sức mạnh của giao diện động và các tính năng thông minh.
 
-## ➕ 3. Kịch bản Thêm sản phẩm mới
-- **Trạng thái**: Đang ở danh mục "Điện thoại".
-- **Bước 1**: Nhấn nút "Thêm sản phẩm mới".
-- **Bước 2 (Xác nhận)**: Hệ thống hiển thị popup hỏi: "Sản phẩm này là Dropbuy hay Non-Dropbuy?".
-- **Bước 3**: Giao diện chuyển sang tab "BIỂU MẪU". Các trường quan trọng như `Tên sản phẩm`, `Giá` được đánh dấu bằng badge **"Bắt buộc"** đỏ.
-- **Bước 4 (Auto-fill)**: Hệ thống tự động điền `Link Zalo` và `Link NV` từ cấu hình mặc định giúp người dùng không phải nhập lại.
-- **Bước 5 (Media)**: Click "+ THÊM ẢNH" để chọn nhiều ảnh cùng lúc. Xem gallery và xóa bớt ảnh lỗi nếu cần.
-- **Bước 6 (Địa chỉ)**: Chọn Tỉnh/TP -> Quận/Huyện -> Phường/Xã từ dropdown hành chính (không gõ tay).
-- **Bước 7**: Nhấn "Lưu". Hệ thống tự khóa nút để tránh nhấn đúp.
-- **Kết quả**: Hệ thống lưu dữ liệu (ghép ảnh thành chuỗi `|`), đóng tab Biểu mẫu và về tab danh mục.
+---
 
-## ✏️ 4. Kịch bản Cập nhật (Edit)
-- **Bước 1**: Nhấn icon Sửa trên dòng sản phẩm "iPhone 15".
-- **Bước 2**: Giao diện chuyển sang tab "BIỂU MẪU", load đầy đủ gallery ảnh hiện tại và các cấp địa chỉ đã chọn.
-- **Bước 3**: Người dùng sửa đổi dữ liệu, thêm/xóa ảnh trong gallery.
-- **Bước 4**: Nhấn "Cập nhật".
-- **Kết quả**: Hệ thống cập nhật bảng dữ liệu, dòng dữ liệu nhấp nháy màu xanh báo hiệu thành công.
+## 📑 1. Điều hướng & Quản lý Danh mục (Smart Inventory)
+- **Tình huống**: Quản trị viên cần tìm và cập nhật kho hàng trong hàng chục danh mục sản phẩm (sheets).
+- **Quy trình**:
+    1. Sử dụng **Quick Search** trên Sidebar để lọc danh mục theo từ khóa.
+    2. Click vào danh mục mục tiêu (Ví dụ: "Balo - Túi xách").
+    3. Hệ thống ghi nhớ tab đang mở (Tab Persistence) giúp quay lại nhanh chóng sau khi chỉnh sửa.
+- **Giá trị**: Giảm 80% thời gian tìm kiếm sheet so với thao tác trên Google Sheets thuần túy.
 
-## 🗑 5. Kịch bản Xóa dữ liệu
-- **Bước 1**: Nhấn icon Xóa.
-- **Bước 2**: Một popup xác nhận hiện lên: "Bạn có chắc chắn muốn xóa sản phẩm này khỏi hệ thống?".
-- **Bước 3**: Người dùng nhấn "Đồng ý xóa".
-- **Kết quả**: Dòng bị ẩn đi ngay lập tức trên web và bị xóa thực tế trong Google Sheet.
+## ➕ 2. Thêm Sản phẩm Mới (Optimized Data Entry)
+- **Tình huống**: CTV nhập sản phẩm mới với yêu cầu nhanh và chính xác nhất.
+- **Quy trình**:
+    1. Nhấn **"THÊM MỚI SẢN PHẨM"**.
+    2. **Xác nhận loại**: Chọn "Dropbuy" hoặc "Non-Dropbuy" (Popup thông minh).
+    3. **Auto-ID Logic**: Hệ thống tự động tính toán và điền mã ID (Ví dụ: `N42`) dựa trên dữ liệu hiện có trong sheet.
+    4. **Smart Form**:
+        - `Link Zalo` & `Link NV`: Tự động điền theo cấu hình mặc định.
+        - `Địa chỉ`: Chọn 3 cấp từ dropdown (Tỉnh -> Quận -> Phường).
+        - `Hình ảnh`: Multiselect và xem trước trong gallery trực quan.
+    5. Nhấn **"LƯU"**.
+- **Giá trị**: Chuẩn hóa dữ liệu ngay từ đầu, loại bỏ hoàn toàn lỗi typos (lỗi gõ tay).
 
-## ➕ 6. Kịch bản Thêm sản phẩm Non-Dropbuy (Chi tiết)
-- **Mô tả**: Người dùng thêm sản phẩm "ngoài luồng", không có mã Dropbuy sẵn.
-- **Bước 1**: Tại tab danh mục, nhấn "Thêm mới" -> Chọn "Non-Dropbuy".
-- **Bước 2**: Hệ thống gọi API tự động tính toán STT và điền mã `N[STT]` (VD: `N37`).
-- **Bước 3**: Chuyển sang tab "BIỂU MẪU", hệ thống tự điền thông tin liên hệ mặc định.
-- **Kết quả**: Sản phẩm được lưu và quản lý theo mã Nxx tăng dần, đảm bảo duy nhất.
+## 🖼️ 3. Quản lý Đa phương thức (Multiple Media Management)
+- **Tình huống**: Một sản phẩm cần hiển thị nhiều góc độ ảnh (Gallery) thay vì 1 ảnh duy nhất.
+- **Quy trình**:
+    1. Tại tab "BIỂU MẪU", nhấn **"+ THÊM ẢNH"**.
+    2. Chọn 3-5 ảnh sản phẩm cùng lúc.
+    3. Hệ thống hiển thị dưới dạng **Gallery Grid**. CTV có thể xóa vĩnh viễn những ảnh không ưng ý trước khi gửi.
+    4. Cloudinary tự động xử lý và lưu trữ URLs bảo mật.
+- **Giá trị**: Tăng tính chuyên nghiệp cho UI Web bán hàng, tối ưu dung lượng hiển thị.
+
+## ✏️ 4. Hiệu chỉnh & Cập nhật (Dynamic Edit Flow)
+- **Tình huống**: Cập nhật giá khuyến mãi hoặc địa chỉ kho cho một sản phẩm hiện có.
+- **Quy trình**:
+    1. Nhấn icon **Sửa** (✏️) trên hàng dữ liệu tương ứng.
+    2. Hệ thống chuyển sang tab **"BIỂU MẪU"**, tự động phân tách chuỗi ảnh `|` thành Gallery và load đúng cấp địa chỉ từ GSheet.
+    3. CTV thực hiện thay đổi và nhấn **"Cập nhật"**.
+- **Giá trị**: Trải nghiệm chỉnh sửa mượt mà như một ứng dụng native (Native-like experience).
+
+## 🗑️ 5. Quản lý Xóa dữ liệu (Safe Deletion)
+- **Tình huống**: Loại bỏ sản phẩm hết hàng hoặc thông tin sai lệch.
+- **Quy trình**:
+    1. Nhấn icon **Xóa** (🗑️).
+    2. Popup xác nhận xuất hiện để tránh thao tác nhầm.
+    3. Xác nhận xóa -> Dòng biến mất tức thì trên Web và bị xóa thực tế trong Google Sheet.
+- **Giá trị**: Đảm bảo an toàn dữ liệu, tránh mất mát thông tin ngoài ý muốn.
