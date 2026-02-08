@@ -6,3 +6,6 @@ jinja2
 python-multipart
 pandas
 python-dotenv
+cloudinary
+openai
+itsdangerous

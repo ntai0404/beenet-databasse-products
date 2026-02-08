@@ -1,42 +1,37 @@
-# SheetFlow Setup Guide
+# BeenetData Setup Guide
 
-Welcome to your Premium Google Sheets CRUD system. 
+Hệ thống quản lý dữ liệu Google Sheets chuyên nghiệp.
 
-## 🚀 Quick Start
+## 🚀 Cài đặt nhanh
 
-1. **Install Dependencies**:
+1. **Tải mã nguồn và Cài đặt thư viện**:
    ```bash
    pip install -r requirements.txt
    ```
 
-2. **Configure Environment**:
-   - Create a `.env` file in the project root (template provided in `.env`).
-   - Set `SHEET_URL` to your Google Sheet URL.
-   - Set `CREDENTIALS_FILE` to the name of your JSON key file (e.g., `firebase-key.json`).
+2. **Cấu hình môi trường**:
+   - Copy `.env.example` thành `.env`.
+   - Điền các thông tin: `SHEET_URL`, `DEEPSEEK_API_KEY`, các thông tin Cloudinary, v.v.
+   - `DEFAULT_LINK_ZALO` và `DEFAULT_LINK_NV` dùng để tự động điền thông tin liên hệ cho sản phẩm mới.
 
-3. **Google Cloud Setup**:
-   - Go to [Google Cloud Console](https://console.cloud.google.com/).
-   - Create a new project.
-   - Enable **Google Sheets API** and **Google Drive API**.
-   - Go to **Credentials** -> **Create Credentials** -> **Service Account**.
-   - Create a key for the service account (JSON format).
-   - Rename the downloaded file to `service_account.json` and place it in the project root.
+3. **Google Sheets API**:
+   - Đặt file JSON credentials của Google Cloud vào thư mục gốc và đổi tên thành tên file bạn đã cấu hình trong `.env` (mặc định là `ggsheet-key.json`).
+   - Chia sẻ Google Sheet cho email `client_email` trong file JSON với quyền **Editor**.
 
-3. **Share the Sheet**:
-   - Open your [Google Sheet](https://docs.google.com/spreadsheets/d/1ekdjU2lJK1MnBzwFr3B8ws2E8GnK1omLJNbIU8puXPI/edit).
-   - Click **Share**.
-   - Add the email address of your service account (found in `service_account.json`) as an **Editor**.
-
-4. **Run the App**:
+4. **Chạy ứng dụng**:
    ```bash
    python main.py
    ```
-   Access the UI at `http://localhost:8000`.
+   Truy cập tại: `http://localhost:8080`
 
-## 🛠 Project Structure
+5. **Đăng nhập**:
+   - Tài khoản: `admin`
+   - Mật khẩu: `admin`
 
-- `main.py`: FastAPI application and routing.
-- `sheets_service.py`: Core logic for interacting with Google Sheets.
-- `templates/`: HTML templates (Jinja2).
-- `static/`: CSS and assets.
-- `requirements.txt`: Python package dependencies.
+## 🛠 Cấu trúc dự án
+
+- `main.py`: Ứng dụng FastAPI, routing và authentication.
+- `sheets_service.py`: Xử lý logic kết nối Google Sheets.
+- `templates/`: Giao diện HTML (Login, Dashboard).
+- `static/`: CSS và Assets (Logo).
+- `.env`: Lưu trữ API Key và cấu hình bảo mật.
